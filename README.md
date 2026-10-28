@@ -15,12 +15,12 @@ Question ──► Proposer ──► Critic ──► Judge ──► Verdict +
 
 All three are OpenMinion **subagents** sharing one runtime. Each returns a
 **typed (structured) result**, and the run is recorded end-to-end so the final
-output is an auditable evidence bundle — not a bare answer.
+output is an auditable evidence bundle, not a bare answer.
 
 ## Veritas and Corgent
 
 [Corgent](https://docs.cortensor.network/community-and-ecosystem/products-and-agents/corgent)
-is Cortensor's core trust & execution agent — the ERC-8004-native oracle that
+is Cortensor's core trust & execution agent, the ERC-8004-native oracle that
 delegates work to redundant miners and validates results with
 PoI/PoUW, consensus, and node reputation. It is already built on the network.
 Veritas does **not** reimplement Corgent. The two answer different questions
@@ -31,7 +31,7 @@ and are designed to be complementary:
 | Trust mechanism | network consensus + proof (redundant miners, PoI/PoUW) | adversarial reasoning (propose / critique / rule) |
 | Question it answers | "was this computed consistently and within spec?" | "does this answer survive a hostile cross-examination?" |
 | Verdicts | `VALID` / `INVALID` / `RETRY` / `NEEDS_SPEC` | `VERIFIED` / `REFUTED` / `UNCERTAIN` |
-| Depends on | the Cortensor network (miners, sessions, validators) | any OpenMinion provider — even one local model |
+| Depends on | the Cortensor network (miners, sessions, validators) | any OpenMinion provider, even one local model |
 | Output | proof signals (consensus, reputation, integrity) | an interpretable reasoning trail (objections that survived, rationale) |
 
 In one line: **Corgent proves the answer was computed consistently by enough
@@ -40,7 +40,7 @@ is the consensus; Veritas is the argument.
 
 Between them sits **Bardiel**, Cortensor's product/UX agent (Virtual-first,
 ERC-8004), built on top of Corgent. It orchestrates the higher-level workflow
-a user-facing app runs — GAME/ACP flows, ecosystem presets — and delegates the
+a user-facing app runs (GAME/ACP flows, ecosystem presets) and delegates the
 trust decision to Corgent.
 
 They meet at the seam where reasoning runs out. When Veritas's Judge returns
@@ -57,7 +57,7 @@ attaches the escalation plan to the report automatically on `UNCERTAIN`.
 ## Why this is interesting
 
 - **Complementary, not a clone.** Veritas deliberately uses a *single* runtime
-  and adversarial roles, not redundant miners — it fills the gap Corgent
+  and adversarial roles, not redundant miners; it fills the gap Corgent
   explicitly leaves open ("agents still think; Corgent helps them be sure").
   Veritas is the reasoning side; Corgent is the proof side.
 - **Self-contained.** No external APIs, no database, no scraping. A single
@@ -68,7 +68,7 @@ attaches the escalation plan to the report automatically on `UNCERTAIN`.
   (`ProviderError`, `TurnTimeoutError`, `AgentOutputValidationError`) are all
   exercised on the happy path and the failure path.
 - **Honest.** When the model can't decide, Veritas says `UNCERTAIN` instead of
-  bluffing — and hands the case to Corgent's consensus layer instead of
+  bluffing, and hands the case to Corgent's consensus layer instead of
   guessing.
 
 ## How it uses the OpenMinion SDK
@@ -107,7 +107,7 @@ public error types (`ProviderError`, `TurnTimeoutError`,
 # 1. install the SDK and configure a provider
 python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-openminion setup            # pick cortensor, ollama, openai, ... — any provider
+openminion setup            # pick cortensor, ollama, openai, ... (any provider)
 
 # 2. sanity-check the runtime
 openminion doctor --check-turn
@@ -134,11 +134,11 @@ python run.py verify
   and set `CORTENSOR_API_KEY`. The completion-style backend is what the SDK
   defaults to for `providers.cortensor`.
 - **Ollama** (local, no key): `openminion setup --provider ollama --model qwen2.5:7b`.
-- Any other provider (OpenAI, Anthropic, DeepSeek, Groq, ...) works the same —
+- Any other provider (OpenAI, Anthropic, DeepSeek, Groq, ...) works the same:
   Veritas is provider-agnostic.
 
 Verified end-to-end on **`deepseek-v4-flash`** (openminion 0.1.14). Avoid
-`deepseek-v4-pro` for structured output — it's agentic and emits tool-call
+`deepseek-v4-pro` for structured output; it's agentic and emits tool-call
 syntax. Prefer a plain chat model (Cortensor `gpt-oss-20b` or
 `deepseek-v4-flash`) for the demo. See `FINDINGS.md` for the full record.
 
@@ -197,8 +197,8 @@ python -m pytest tests -q
 ```
 
 Offline unit tests cover the typed models, the case model, the Corgent handoff
-logic, and report rendering — no model or network required.
+logic, and report rendering (no model or network required).
 
 ## License
 
-MIT — see LICENSE.
+MIT. See LICENSE.
