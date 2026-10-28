@@ -125,6 +125,11 @@ def _run_typed(
             result = agent.run(message, timeout_seconds=timeout_seconds)
         except AgentOutputValidationError as exc:
             if attempt < 3:
+                print(
+                    f"[veritas] {stage}: reply was not valid JSON on attempt "
+                    f"{attempt}, retrying ...",
+                    flush=True,
+                )
                 message = (
                     f"{message}\n\nYour previous reply was not valid JSON for "
                     f"the required schema. Do not call tools or emit tool-call "
@@ -168,6 +173,7 @@ def adversarial_verify(
 
     case = Case(question=question)
     child_timeout = int(timeout_seconds) if timeout_seconds else None
+    print(f"[veritas] case {case.case_id} — verifying question", flush=True)
 
     try:
         with Agent(
@@ -186,12 +192,18 @@ def adversarial_verify(
                 tools=[],
                 timeout_seconds=child_timeout,
             )
+            print("[veritas] 1/3 proposer — answering ...", flush=True)
             claim = _run_typed(
                 proposer, question, "proposer", case, timeout_seconds, CLAIM_EXAMPLE
             )
             case.claim = claim
             if claim is None:
+                print(
+                    f"[veritas] proposer failed: {case.stage_errors.get('proposer')}",
+                    flush=True,
+                )
                 return case
+            print(f"[veritas] proposer done — confidence {claim.confidence}", flush=True)
 
             critic = subagent(
                 coordinator,
@@ -206,12 +218,22 @@ def adversarial_verify(
                 f"Question: {question}\n\n"
                 f"Proposed claim (JSON):\n{claim.model_dump_json(indent=2)}"
             )
+            print("[veritas] 2/3 critic — attacking ...", flush=True)
             critique = _run_typed(
                 critic, critic_msg, "critic", case, timeout_seconds, CRITIQUE_EXAMPLE
             )
             case.critique = critique
             if critique is None:
+                print(
+                    f"[veritas] critic failed: {case.stage_errors.get('critic')}",
+                    flush=True,
+                )
                 return case
+            print(
+                f"[veritas] critic done — {len(critique.objections)} objection(s), "
+                f"overall {critique.overall}",
+                flush=True,
+            )
 
             judge = subagent(
                 coordinator,
@@ -227,10 +249,21 @@ def adversarial_verify(
                 f"Proposed claim (JSON):\n{claim.model_dump_json(indent=2)}\n\n"
                 f"Critique (JSON):\n{critique.model_dump_json(indent=2)}"
             )
+            print("[veritas] 3/3 judge — ruling ...", flush=True)
             verdict = _run_typed(
                 judge, judge_msg, "judge", case, timeout_seconds, VERDICT_EXAMPLE
             )
             case.verdict = verdict
+            if verdict is None:
+                print(
+                    f"[veritas] judge failed: {case.stage_errors.get('judge')}",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"[veritas] judge done — {verdict.status} (score {verdict.score})",
+                    flush=True,
+                )
     except ProviderError as exc:
         code = getattr(exc, "code", "")
         message_ = getattr(exc, "message", exc)
