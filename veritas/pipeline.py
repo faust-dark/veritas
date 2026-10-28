@@ -174,6 +174,11 @@ def adversarial_verify(
 
     case = Case(question=question)
     child_timeout = int(timeout_seconds) if timeout_seconds else None
+    # The judge synthesizes the whole claim + critique into a verdict and
+    # evidence bundle, so it is materially heavier than the other two stages.
+    # Give it double headroom so a complex critique doesn't trip the turn cap
+    # that the proposer and critic pass comfortably.
+    judge_timeout = None if timeout_seconds is None else timeout_seconds * 2.0
     print(f"[veritas] case {case.case_id} — verifying question", flush=True)
 
     try:
@@ -243,7 +248,7 @@ def adversarial_verify(
                 output_type=Verdict,
                 model=model,
                 tools=[],
-                timeout_seconds=child_timeout,
+                timeout_seconds=int(judge_timeout) if judge_timeout else None,
             )
             judge_msg = (
                 f"Question: {question}\n\n"
@@ -252,7 +257,7 @@ def adversarial_verify(
             )
             print("[veritas] 3/3 judge — ruling ...", flush=True)
             verdict = _run_typed(
-                judge, judge_msg, "judge", case, timeout_seconds, VERDICT_EXAMPLE
+                judge, judge_msg, "judge", case, judge_timeout, VERDICT_EXAMPLE
             )
             case.verdict = verdict
             if verdict is None:
