@@ -1,26 +1,27 @@
-"""Corgent seam — where Veritas hands off to Cortensor's trust agent.
+"""Escalation seam — Veritas hands off to Bardiel and Corgent when reasoning
+alone cannot settle a claim.
 
-Corgent (Cortensor's core trust & execution agent) and Veritas answer two
-*different* questions about an output:
+Veritas, Bardiel, and Corgent answer different layers of the same question:
 
-  * Corgent: "Was this computed by enough independent miners, consistently and
-    within spec?" -> network consensus + PoI/PoUW proofs.
+  * Veritas — adversarial *reasoning* on one runtime (propose / critique /
+    rule). Verdicts: VERIFIED / REFUTED / UNCERTAIN.
+
+  * Bardiel — Cortensor's *product/UX* agent (Virtual-first, ERC-8004), built
+    on top of Corgent. It orchestrates the higher-level workflow (GAME/ACP
+    flows, ecosystem presets) that a user-facing app runs.
+
+  * Corgent — Cortensor's *core trust & execution* agent. It delegates to
+    redundant miners and validates with PoI/PoUW + consensus + reputation.
     Verdicts: VALID / INVALID / RETRY / NEEDS_SPEC.
 
-  * Veritas: "Does this answer survive a hostile cross-examination?"
-    -> adversarial reasoning (propose / critique / rule) on a single runtime.
-    Verdicts: VERIFIED / REFUTED / UNCERTAIN.
+The escalation ladder: when Veritas returns UNCERTAIN, a product app routes
+the case through Bardiel (orchestration), which delegates the trust decision
+to Corgent (network consensus). Reasoning, then product workflow, then
+network proof — each layer adds what the one before it cannot.
 
-Neither replaces the other. Veritas exhausts what *reasoning* can tell you;
-Corgent settles what only *the network* can tell you (redundant miners,
-consensus clustering, reputation weighting). This module renders the seam
-between the two: when Veritas's Judge returns UNCERTAIN, the claim is a
-candidate for Corgent `validate` — re-run on the network and compared.
-
-Corgent's public request shapes are Draft (see Cortensor docs). The payloads
-below express the documented concepts (delegate / validate, reliability tiers,
-verdict vocabulary) in a concrete request form, not a verified wire schema.
-Treat this as an integration point, not a live client.
+Bardiel's and Corgent's public request shapes are Draft (see Cortensor docs).
+The payloads here express the documented concepts in a concrete request form,
+not a verified wire schema. This is an integration point, not a live client.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from __future__ import annotations
 from veritas.pipeline import Case
 
 RELIABILITY_TIERS = ("fast", "safe", "oracle")
+BARDIEL_WORKFLOWS = ("game", "acp", "erc8004")
 CORGENT_VERDICTS = ("VALID", "INVALID", "RETRY", "NEEDS_SPEC")
 VERITAS_VERDICTS = ("VERIFIED", "REFUTED", "UNCERTAIN")
 
@@ -54,6 +56,29 @@ def validate_request(question: str, claimed_answer: str) -> dict:
     }
 
 
+def bardiel_request(
+    question: str,
+    claimed_answer: str,
+    workflow: str = "game",
+) -> dict:
+    """Render a Bardiel-level orchestration request.
+
+    Bardiel is the product layer: it does not re-derive the trust decision,
+    it wraps the case in the app's workflow (GAME/ACP/ERC-8004) and delegates
+    the actual verification to Corgent. Shape is illustrative (Draft), not a
+    verified wire schema.
+    """
+    if workflow not in BARDIEL_WORKFLOWS:
+        raise ValueError(f"workflow must be one of {BARDIEL_WORKFLOWS}")
+    return {
+        "operation": "resolve_uncertain",
+        "workflow": workflow,
+        "task": {"prompt": question},
+        "claim": {"output": claimed_answer},
+        "delegate_to": "corgent",
+    }
+
+
 def handoff(case: Case) -> dict | None:
     """Return a Corgent ``validate`` request when reasoning alone is exhausted.
 
@@ -68,18 +93,50 @@ def handoff(case: Case) -> dict | None:
     return validate_request(case.question, claimed_answer)
 
 
-def relationship() -> dict:
-    """Machine-readable statement of how Veritas complements Corgent."""
+def escalation_plan(case: Case) -> dict | None:
+    """Build the full Veritas -> Bardiel -> Corgent escalation ladder.
+
+    Returns ``None`` unless the verdict is UNCERTAIN (the only state where
+    reasoning is exhausted and escalation is warranted).
+    """
+    verdict = case.verdict
+    if verdict is None or verdict.status.upper() != "UNCERTAIN":
+        return None
+    claimed_answer = case.claim.answer if case.claim is not None else ""
     return {
-        "corgent": {
-            "role": "network consensus + proof (PoI/PoUW, redundant miners)",
-            "question": "was this computed consistently and within spec?",
-            "verdicts": list(CORGENT_VERDICTS),
-        },
+        "trigger": "veritas verdict == UNCERTAIN (reasoning exhausted)",
+        "route": [
+            {
+                "layer": "bardiel",
+                "role": "product/UX orchestration (GAME/ACP flow)",
+                "request": bardiel_request(case.question, claimed_answer),
+            },
+            {
+                "layer": "corgent",
+                "role": "network consensus + proof (PoI/PoUW, redundant miners)",
+                "request": validate_request(case.question, claimed_answer),
+            },
+        ],
+        "expected_verdicts": list(CORGENT_VERDICTS),
+    }
+
+
+def relationship() -> dict:
+    """Machine-readable statement of how Veritas, Bardiel, and Corgent fit."""
+    return {
         "veritas": {
             "role": "adversarial reasoning (propose / critique / rule)",
             "question": "does this answer survive hostile cross-examination?",
             "verdicts": list(VERITAS_VERDICTS),
         },
-        "handoff": "when verdict == UNCERTAIN, delegate to Corgent validate",
+        "bardiel": {
+            "role": "product/UX orchestration (GAME/ACP), built on Corgent",
+            "question": "how should the app surface and act on this uncertainty?",
+        },
+        "corgent": {
+            "role": "network consensus + proof (PoI/PoUW, redundant miners)",
+            "question": "was this computed consistently and within spec?",
+            "verdicts": list(CORGENT_VERDICTS),
+        },
+        "escalation": "UNCERTAIN -> Bardiel orchestrates -> Corgent validates",
     }

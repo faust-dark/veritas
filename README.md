@@ -36,9 +36,21 @@ In one line: **Corgent proves the answer was computed consistently by enough
 miners; Veritas proves the answer survives hostile cross-examination.** Corgent
 is the consensus; Veritas is the argument.
 
-They meet at the seam where reasoning runs out: when Veritas's Judge returns
-`UNCERTAIN`, `veritas.corgent.handoff(case)` renders the Corgent `validate`
-request that would settle it on-chain. See `veritas/corgent.py`.
+Between them sits **Bardiel**, Cortensor's product/UX agent (Virtual-first,
+ERC-8004), built on top of Corgent. It orchestrates the higher-level workflow
+a user-facing app runs — GAME/ACP flows, ecosystem presets — and delegates the
+trust decision to Corgent.
+
+They meet at the seam where reasoning runs out. When Veritas's Judge returns
+`UNCERTAIN`, the case escalates up the ladder:
+
+```
+UNCERTAIN ──► Bardiel (product orchestration) ──► Corgent (network consensus)
+```
+
+`veritas.corgent.escalation_plan(case)` renders the full route as concrete
+requests; `handoff(case)` returns just the Corgent `validate` request. The CLI
+attaches the escalation plan to the report automatically on `UNCERTAIN`.
 
 ## Why this is interesting
 
@@ -149,7 +161,7 @@ veritas/
 ├── veritas/
 │   ├── models.py          # Claim / Objection / Critique / Verdict (Pydantic)
 │   ├── pipeline.py        # Proposer -> Critic -> Judge orchestration
-│   ├── corgent.py         # Corgent handoff seam (delegate/validate, relationship)
+│   ├── corgent.py         # Bardiel + Corgent escalation seam (escalation_plan, handoff)
 │   ├── report.py          # Markdown + JSON rendering of the evidence bundle
 │   ├── probes.py          # per-building-block demonstrations
 │   └── cli.py             # argparse interface
@@ -173,7 +185,7 @@ veritas/
 | Memory | `probes.py` | cross-turn recall in one session |
 | Error handling | `pipeline.py` | `ProviderError` / `TurnTimeoutError` / `AgentOutputValidationError` |
 | Diagnostics | `Makefile` | `openminion doctor --check-turn`, `config init` |
-| Corgent seam | `corgent.py` | `handoff()` for `UNCERTAIN` verdicts |
+| Escalation seam | `corgent.py` | `escalation_plan()`: `UNCERTAIN` → Bardiel → Corgent |
 
 ## Tests
 

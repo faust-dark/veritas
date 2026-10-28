@@ -70,6 +70,21 @@ def render_markdown(case: Case) -> str:
             lines += [f"  - {e}" for e in v.evidence]
         lines.append("")
 
+    if case.escalation:
+        lines += [
+            "## Escalation — Veritas → Bardiel → Corgent",
+            "",
+            f"- **Trigger:** {case.escalation.get('trigger', '')}",
+            "- **Expected Corgent verdicts:** "
+            + ", ".join(case.escalation.get("expected_verdicts", [])),
+        ]
+        for step in case.escalation.get("route", []):
+            lines.append(
+                f"- **{step.get('layer')}** — {step.get('role')}: "
+                f"`{json.dumps(step.get('request'), sort_keys=True)}`"
+            )
+        lines.append("")
+
     if case.stage_runs:
         lines += ["## Run audit trail", ""]
         for stage, run in case.stage_runs.items():

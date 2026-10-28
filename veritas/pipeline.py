@@ -99,6 +99,7 @@ class Case:
     verdict: Verdict | None = None
     stage_errors: dict[str, str] = field(default_factory=dict)
     stage_runs: dict[str, dict] = field(default_factory=dict)
+    escalation: dict | None = None
 
     @property
     def ok(self) -> bool:

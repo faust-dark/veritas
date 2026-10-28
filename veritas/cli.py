@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from veritas import probes
+from veritas.corgent import escalation_plan
 from veritas.pipeline import adversarial_verify
 from veritas.report import render_json, render_markdown
 
@@ -22,6 +23,10 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         timeout_seconds=args.timeout,
         session_id=args.session,
     )
+    # When reasoning alone cannot settle the claim, attach the escalation
+    # ladder (Veritas -> Bardiel -> Corgent) so the report shows it.
+    if case.verdict is not None and case.verdict.status.upper() == "UNCERTAIN":
+        case.escalation = escalation_plan(case)
     print(render_markdown(case))
     if args.out:
         out = Path(args.out)

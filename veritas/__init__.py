@@ -11,9 +11,12 @@ consensus + proof* side. See :mod:`veritas.corgent`.
 """
 
 from veritas.corgent import (
+    BARDIEL_WORKFLOWS,
     CORGENT_VERDICTS,
     VERITAS_VERDICTS,
+    bardiel_request,
     delegate_request,
+    escalation_plan,
     handoff,
     relationship,
     validate_request,
@@ -22,6 +25,7 @@ from veritas.models import Claim, Critique, Objection, Verdict
 from veritas.pipeline import Case, adversarial_verify
 
 __all__ = [
+    "BARDIEL_WORKFLOWS",
     "CORGENT_VERDICTS",
     "Case",
     "Claim",
@@ -30,7 +34,9 @@ __all__ = [
     "VERITAS_VERDICTS",
     "Verdict",
     "adversarial_verify",
+    "bardiel_request",
     "delegate_request",
+    "escalation_plan",
     "handoff",
     "relationship",
     "validate_request",
