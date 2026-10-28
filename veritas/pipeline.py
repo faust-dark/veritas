@@ -13,6 +13,7 @@ computed consistently by the network. See :mod:`veritas.corgent` for the seam.
 
 from __future__ import annotations
 
+import sys
 import uuid
 from dataclasses import dataclass, field
 
@@ -129,7 +130,7 @@ def _run_typed(
                 print(
                     f"[veritas] {stage}: reply was not valid JSON on attempt "
                     f"{attempt}, retrying ...",
-                    flush=True,
+                    flush=True, file=sys.stderr,
                 )
                 message = (
                     f"{message}\n\nYour previous reply was not valid JSON for "
@@ -179,7 +180,7 @@ def adversarial_verify(
     # Give it double headroom so a complex critique doesn't trip the turn cap
     # that the proposer and critic pass comfortably.
     judge_timeout = None if timeout_seconds is None else timeout_seconds * 2.0
-    print(f"[veritas] case {case.case_id} — verifying question", flush=True)
+    print(f"[veritas] case {case.case_id} — verifying question", flush=True, file=sys.stderr)
 
     try:
         with Agent(
@@ -198,7 +199,7 @@ def adversarial_verify(
                 tools=[],
                 timeout_seconds=child_timeout,
             )
-            print("[veritas] 1/3 proposer — answering ...", flush=True)
+            print("[veritas] 1/3 proposer — answering ...", flush=True, file=sys.stderr)
             claim = _run_typed(
                 proposer, question, "proposer", case, timeout_seconds, CLAIM_EXAMPLE
             )
@@ -206,10 +207,10 @@ def adversarial_verify(
             if claim is None:
                 print(
                     f"[veritas] proposer failed: {case.stage_errors.get('proposer')}",
-                    flush=True,
+                    flush=True, file=sys.stderr,
                 )
                 return case
-            print(f"[veritas] proposer done — confidence {claim.confidence}", flush=True)
+            print(f"[veritas] proposer done — confidence {claim.confidence}", flush=True, file=sys.stderr)
 
             critic = subagent(
                 coordinator,
@@ -224,7 +225,7 @@ def adversarial_verify(
                 f"Question: {question}\n\n"
                 f"Proposed claim (JSON):\n{claim.model_dump_json(indent=2)}"
             )
-            print("[veritas] 2/3 critic — attacking ...", flush=True)
+            print("[veritas] 2/3 critic — attacking ...", flush=True, file=sys.stderr)
             critique = _run_typed(
                 critic, critic_msg, "critic", case, timeout_seconds, CRITIQUE_EXAMPLE
             )
@@ -232,13 +233,13 @@ def adversarial_verify(
             if critique is None:
                 print(
                     f"[veritas] critic failed: {case.stage_errors.get('critic')}",
-                    flush=True,
+                    flush=True, file=sys.stderr,
                 )
                 return case
             print(
                 f"[veritas] critic done — {len(critique.objections)} objection(s), "
                 f"overall {critique.overall}",
-                flush=True,
+                flush=True, file=sys.stderr,
             )
 
             judge = subagent(
@@ -255,7 +256,7 @@ def adversarial_verify(
                 f"Proposed claim (JSON):\n{claim.model_dump_json(indent=2)}\n\n"
                 f"Critique (JSON):\n{critique.model_dump_json(indent=2)}"
             )
-            print("[veritas] 3/3 judge — ruling ...", flush=True)
+            print("[veritas] 3/3 judge — ruling ...", flush=True, file=sys.stderr)
             verdict = _run_typed(
                 judge, judge_msg, "judge", case, judge_timeout, VERDICT_EXAMPLE
             )
@@ -263,12 +264,12 @@ def adversarial_verify(
             if verdict is None:
                 print(
                     f"[veritas] judge failed: {case.stage_errors.get('judge')}",
-                    flush=True,
+                    flush=True, file=sys.stderr,
                 )
             else:
                 print(
                     f"[veritas] judge done — {verdict.status} (score {verdict.score})",
-                    flush=True,
+                    flush=True, file=sys.stderr,
                 )
     except ProviderError as exc:
         code = getattr(exc, "code", "")

@@ -27,7 +27,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     # ladder (Veritas -> Bardiel -> Corgent) so the report shows it.
     if case.verdict is not None and case.verdict.status.upper() == "UNCERTAIN":
         case.escalation = escalation_plan(case)
-    print(render_markdown(case))
+    print(render_json(case) if args.json else render_markdown(case))
     if args.out:
         out = Path(args.out)
         out.mkdir(parents=True, exist_ok=True)
@@ -70,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--session", default=None, help="Session id for continuity")
     verify.add_argument("--timeout", type=float, default=180.0)
     verify.add_argument("--out", default=None, help="Directory for verdict.md/.json")
+    verify.add_argument("--json", action="store_true", help="Print JSON only to stdout")
     verify.set_defaults(func=_cmd_verify)
 
     probe = sub.add_parser("probe", help="Run one building-block probe")

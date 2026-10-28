@@ -3,15 +3,28 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 
 from veritas.pipeline import Case
 
 _STATUS_ICON = {"VERIFIED": "PASS", "REFUTED": "FAIL", "UNCERTAIN": "???"}
 
 
+def _to_dict(case: Case) -> dict:
+    """Serialize a Case with its Pydantic models as nested dicts (not strings)."""
+    return {
+        "question": case.question,
+        "case_id": case.case_id,
+        "claim": case.claim.model_dump() if case.claim is not None else None,
+        "critique": case.critique.model_dump() if case.critique is not None else None,
+        "verdict": case.verdict.model_dump() if case.verdict is not None else None,
+        "stage_errors": case.stage_errors,
+        "stage_runs": case.stage_runs,
+        "escalation": case.escalation,
+    }
+
+
 def render_json(case: Case) -> str:
-    return json.dumps(asdict(case), indent=2, ensure_ascii=False, default=str)
+    return json.dumps(_to_dict(case), indent=2, ensure_ascii=False)
 
 
 def render_markdown(case: Case) -> str:

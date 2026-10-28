@@ -1,5 +1,7 @@
 # Veritas
 
+![tests](https://github.com/faust-dark/veritas/actions/workflows/ci.yml/badge.svg)
+
 Adversarial verification on the [OpenMinion](https://openminion.com) 0.1 SDK.
 
 Veritas answers a question the way you'd want a *trusted* system to answer it:

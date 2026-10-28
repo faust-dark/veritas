@@ -61,6 +61,10 @@ def test_render_json_and_markdown():
     )
     js = render_json(case)
     assert "abc123" in js
+    data = json.loads(js)
+    assert data["verdict"]["status"] == "UNCERTAIN"
+    assert data["claim"]["answer"] == "A"
+    assert data["critique"]["objections"][0]["severity"] == "major"
     md = render_markdown(case)
     assert "q?" in md
     assert "UNCERTAIN" in md
