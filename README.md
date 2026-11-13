@@ -1,5 +1,7 @@
 # Veritas
 
+Built for **Cortensor Hackathon #5**: a small, working agent on the OpenMinion 0.1 SDK.
+
 ![tests](https://github.com/faust-dark/veritas/actions/workflows/ci.yml/badge.svg)
 
 Adversarial verification on the [OpenMinion](https://openminion.com) 0.1 SDK.
